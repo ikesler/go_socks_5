@@ -1,0 +1,6 @@
+**
+
+# Allow files and directories
+!/go.mod
+!/go.sum
+!/main.go

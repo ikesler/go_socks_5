@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,9 +14,10 @@ import (
 )
 
 type MyRewriter struct {
-	Hosts    []string
-	Upstream net.IP
-	Ips      **[]net.IP
+	Hosts        []string
+	UpstreamHost net.IP
+	UpstreamPort int
+	Ips          **[]net.IP
 }
 
 func (rw MyRewriter) shouldRoute(ip net.IP) bool {
@@ -34,7 +36,8 @@ func (rw MyRewriter) shouldRoute(ip net.IP) bool {
 func (rw MyRewriter) Rewrite(ctx context.Context, request *socks5.Request) (context.Context, *statute.AddrSpec) {
 	if rw.shouldRoute(request.DestAddr.IP) {
 		result := &statute.AddrSpec{
-			IP: rw.Upstream,
+			IP:   rw.UpstreamHost,
+			Port: rw.UpstreamPort,
 		}
 		return ctx, result
 	}
@@ -53,27 +56,39 @@ func (rw MyRewriter) resolve() {
 }
 
 func main() {
+	println("Starting application")
 	hostsEnv := os.Getenv("ROUTE_TO_UPSTREAM_HOSTS")
-	upstreamEnv := os.Getenv("UPSTREAM_IP")
+	upstreamIpEnv := os.Getenv("UPSTREAM_IP")
+	upstreamPortEnv := os.Getenv("UPSTREAM_PORT")
 
-	hosts := strings.Split(hostsEnv, ",")
-	upstream := net.ParseIP(upstreamEnv)
+	var rewriter MyRewriter
 
-	ips := []net.IP{}
-	ipsRef := &ips
+	if hostsEnv != "" && upstreamIpEnv != "" && upstreamPortEnv != "" {
+		println("Running resolver routine")
+		hosts := strings.Split(hostsEnv, ",")
+		upstreamIp := net.ParseIP(upstreamIpEnv)
+		var upstreamPort int64
+		upstreamPort, _ = strconv.ParseInt(upstreamPortEnv, 10, 32)
 
-	rewriter := MyRewriter{
-		Hosts:    hosts,
-		Ips:      &ipsRef,
-		Upstream: upstream,
+		ips := []net.IP{}
+		ipsRef := &ips
+
+		rewriter = MyRewriter{
+			Hosts:        hosts,
+			Ips:          &ipsRef,
+			UpstreamHost: upstreamIp,
+			UpstreamPort: int(upstreamPort),
+		}
+		go rewriter.resolve()
 	}
-	go rewriter.resolve()
+
 	// Create a SOCKS5 server
 	server := socks5.NewServer(
 		socks5.WithLogger(socks5.NewLogger(log.New(os.Stdout, "socks5: ", log.LstdFlags))),
 		socks5.WithRewriter(rewriter),
 	)
 
+	println("Running proxy routine")
 	if err := server.ListenAndServe("tcp", ":10800"); err != nil {
 		panic(err)
 	}

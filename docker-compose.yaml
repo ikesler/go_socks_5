@@ -1,0 +1,38 @@
+version: '3.3'
+
+services:
+  proxy1:
+    build:
+      context: .
+      labels:
+        - go_socks_5
+    ports:
+      - 10800:10800
+    environment:
+      - ROUTE_TO_UPSTREAM_HOSTS=google.com,www.google.com
+      - UPSTREAM_IP=10.6.0.3
+      - UPSTREAM_PORT=10800
+    networks:
+      socks:  
+        ipv4_address: 10.6.0.2
+
+  proxy2:
+    build:
+      context: .
+      labels:
+        - go_socks_5
+    environment:
+      - ROUTE_TO_UPSTREAM_HOSTS=
+      - UPSTREAM_IP=
+      - UPSTREAM_PORT=
+    networks:
+      socks:
+        ipv4_address: 10.6.0.3
+
+networks:
+  socks:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.6.0.0/16
+          gateway: 10.6.0.1
