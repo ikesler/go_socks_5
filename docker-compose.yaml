@@ -10,8 +10,7 @@ services:
       - 10800:10800
     environment:
       - ROUTE_TO_UPSTREAM_HOSTS=google.com,www.google.com
-      - UPSTREAM_IP=10.6.0.3
-      - UPSTREAM_PORT=10800
+      - UPSTREAM=10.6.0.3:10800
     networks:
       socks:  
         ipv4_address: 10.6.0.2
@@ -23,8 +22,7 @@ services:
         - go_socks_5
     environment:
       - ROUTE_TO_UPSTREAM_HOSTS=
-      - UPSTREAM_IP=
-      - UPSTREAM_PORT=
+      - UPSTREAM=
     networks:
       socks:
         ipv4_address: 10.6.0.3

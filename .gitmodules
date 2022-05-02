@@ -1,0 +1,3 @@
+[submodule "go-socks5"]
+	path = go-socks5
+	url = https://github.com/ikesler/go-socks5
